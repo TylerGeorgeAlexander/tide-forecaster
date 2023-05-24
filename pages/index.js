@@ -29,13 +29,11 @@ const IndexPage = () => {
       const model = await trainModel(trainingData, trainingLabels);
 
       // Predict
-      const currentHour = new Date().getHours();
+      const currentTimestamp = new Date().getTime();
       const predictionData = [];
-      for (let i = currentHour; i <= 24; i++) {
-        const date = new Date();
-        date.setHours(i);
-        // Here we pass the normalized timestamp and the last known tide value
-        predictionData.push([(date.getTime() - minTimestamp) / (maxTimestamp - minTimestamp), trainingData[trainingData.length - 1][1]]);
+      for (let i = 0; i <= 24; i++) {
+        const futureTimestamp = currentTimestamp + (i * 60 * 60 * 1000);  // 1 hour = 60*60*1000 milliseconds
+        predictionData.push([(futureTimestamp - minTimestamp) / (maxTimestamp - minTimestamp), trainingData[trainingData.length - 1][1]]);
       }
       const xs = tf.tensor2d(predictionData, [predictionData.length, 2]); // Adjust shape to [2]
       const predictionResults = model.predict(xs).arraySync();
@@ -45,11 +43,10 @@ const IndexPage = () => {
     fetchTideData();
   }, []);
 
-  const currentHour = new Date().getHours();
-  const labels = Array.from({ length: 25 - currentHour }, (_, i) => {
-    const date = new Date();
-    date.setHours(currentHour + i);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const currentTimestamp = new Date().getTime();
+  const labels = Array.from({ length: 25 }, (_, i) => {
+    const futureTimestamp = new Date(currentTimestamp + (i * 60 * 60 * 1000));
+    return futureTimestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   });
 
   const data = {
