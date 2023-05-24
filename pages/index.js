@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import * as tf from '@tensorflow/tfjs';
 import trainModel from '../utils/trainModel';
+import TideGraph from '../components/TideGraph'
 
 const IndexPage = () => {
   const [predictions, setPredictions] = useState([]);
@@ -27,25 +28,32 @@ const IndexPage = () => {
       // Train the model
       const model = await trainModel(trainingData, trainingLabels);
 
-    // Predict
-    const currentHour = new Date().getHours();
-    const predictionData = [];
-    for (let i = currentHour; i <= 24; i++) {
-      const date = new Date();
-      date.setHours(i);
-      // Here we pass the normalized timestamp and the last known tide value
-      predictionData.push([(date.getTime() - minTimestamp) / (maxTimestamp - minTimestamp), trainingData[trainingData.length - 1][1]]);
-    }
-    const xs = tf.tensor2d(predictionData, [predictionData.length, 2]);  // Adjust shape to [2]
-    const predictionResults = model.predict(xs).arraySync();
-    setPredictions(predictionResults.map(prediction => prediction[0]));
-  };
+      // Predict
+      const currentHour = new Date().getHours();
+      const predictionData = [];
+      for (let i = currentHour; i <= 24; i++) {
+        const date = new Date();
+        date.setHours(i);
+        // Here we pass the normalized timestamp and the last known tide value
+        predictionData.push([(date.getTime() - minTimestamp) / (maxTimestamp - minTimestamp), trainingData[trainingData.length - 1][1]]);
+      }
+      const xs = tf.tensor2d(predictionData, [predictionData.length, 2]); // Adjust shape to [2]
+      const predictionResults = model.predict(xs).arraySync();
+      setPredictions(predictionResults.map(prediction => prediction[0]));
+    };
 
-  fetchTideData();
+    fetchTideData();
   }, []);
 
+  const currentHour = new Date().getHours();
+  const labels = Array.from({ length: 25 - currentHour }, (_, i) => {
+    const date = new Date();
+    date.setHours(currentHour + i);
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  });
+
   const data = {
-    labels: Array.from({ length: 25 - new Date().getHours() }, (_, i) => new Date().setHours(new Date().getHours() + i)),
+    labels: labels,
     datasets: [
       {
         label: 'Tide Prediction',
@@ -56,7 +64,7 @@ const IndexPage = () => {
       },
     ],
   };
-  
+
   const options = {
     scales: {
       x: {
@@ -73,11 +81,12 @@ const IndexPage = () => {
       }
     }
   };
-  
+
   return (
     <div>
       <h1>Ocean Tide Prediction</h1>
       <Line data={data} options={options} />
+      <TideGraph />
     </div>
   );
 };
